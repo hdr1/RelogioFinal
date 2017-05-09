@@ -176,9 +176,10 @@ function initMMarksBuffer(){
     for (let j = 0; j < 60; j++)
     {
       angle = j/60 * (Math.PI * 2);
-      /*if(j == 0  || j == 5  || j == 10 || j == 15 || j == 20 ||
+      
+        if(j == 0  || j == 5  || j == 10 || j == 15 || j == 20 ||
          j == 25 || j == 30 || j == 35 || j == 40 || j == 45 ||
-         j == 50 || j == 55) continue;*/
+         j == 50 || j == 55) continue;
 
 
          marksM.push((radius-0.1) * Math.cos(angle),
