@@ -58,6 +58,33 @@ function initGL(canvas) {
 
 let mvMatrix = mat4.create();
 let pMatrix = mat4.create();
+var mMatrixPilha = [];
+var date = new Date;
+
+var sec = date.getSeconds();
+var min = date.getMinutes();
+var hour = date.getHours();
+
+var sAngle = -1*(((Math.PI * 2) * (sec / 60)) - ((Math.PI * 2) / 4));
+let mAngle = -1*(((Math.PI * 2) * (min / 60)) - ((Math.PI * 2) / 4));
+let hAngle = -1*(((Math.PI * 2) * ((hour * 5 + (min / 60) * 5) / 60)) - ((Math.PI * 2) / 4));
+
+function mPushMatrix() {
+  var copy = mat4.create();
+  mat4.set(mvMatrix, copy);
+  mMatrixPilha.push(copy);
+}
+
+function mPopMatrix() {
+  if (mMatrixPilha.length == 0) {
+    throw "inválido popMatrix!";
+  }
+  mvMatrix = mMatrixPilha.pop();
+}
+
+function degToRad(graus) {
+  return graus * Math.PI / 180;
+}
 
 function setMatrixUniforms() {
   gl.uniformMatrix4fv(program.pMatrixUniform, false, pMatrix);
@@ -89,10 +116,11 @@ function initHourHandBuffer(){
 
     let vertexCount = 100;
     let radius = 2.7;
-    let angle = (Math.PI * 2) / 12;
+
+    //let angle = (Math.PI * 2) / 12;
 
     let marks = [0, 0,
-                (radius-1.5) * Math.cos(angle), (radius-1.5) * Math.sin(angle)];
+                (radius-1.5) * Math.cos(hAngle), (radius-1.5) * Math.sin(hAngle)];
 
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(marks), gl.STATIC_DRAW);
     hourHandVertexPositionBuffer.itemSize = 2;
@@ -106,10 +134,10 @@ function initMinHanBuffer(){
 
     let vertexCount = 100;
     let radius = 2.7;
-    let angle = 11 * ((Math.PI) / 7);
+    //let angle = 11 * ((Math.PI) / 7);
 
     let marks = [0, 0,
-                (radius-0.9) * Math.cos(angle), (radius-0.9) * Math.sin(angle)];
+                (radius-0.9) * Math.cos(mAngle), (radius-0.9) * Math.sin(mAngle)];
 
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(marks), gl.STATIC_DRAW);
     minHandVertexPositionBuffer.itemSize = 2;
@@ -120,13 +148,13 @@ function initSecHandBuffer(){
   secHandVertexPositionBuffer = gl.createBuffer();
 
   gl.bindBuffer(gl.ARRAY_BUFFER, secHandVertexPositionBuffer);
+  let date = new Date();
 
   let vertexCount = 100;
   let radius = 2.7;
-  let angle = Math.PI;
 
   let marks = [0, 0,
-              (radius-0.5) * Math.cos(angle), (radius-0.5) * Math.sin(angle)];
+              (radius-0.5) * Math.cos(sAngle), (radius-0.5) * Math.sin(sAngle)];
 
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(marks), gl.STATIC_DRAW);
   secHandVertexPositionBuffer.itemSize = 2;
@@ -176,10 +204,10 @@ function initMMarksBuffer(){
     for (let j = 0; j < 60; j++)
     {
       angle = j/60 * (Math.PI * 2);
-      
-        if(j == 0  || j == 5  || j == 10 || j == 15 || j == 20 ||
+
+        /*if(j == 0  || j == 5  || j == 10 || j == 15 || j == 20 ||
          j == 25 || j == 30 || j == 35 || j == 40 || j == 45 ||
-         j == 50 || j == 55) continue;
+         j == 50 || j == 55) continue;*/
 
 
          marksM.push((radius-0.1) * Math.cos(angle),
@@ -225,11 +253,12 @@ function drawScene() {
     gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    /* ------  Desenha o Circulo ------ */
+    /* ------  Prepara as matrizes de transformação ------ */
     mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
     mat4.identity(mvMatrix);
     mat4.translate(mvMatrix, [0.0, 0.0, -7.0]);
     mat4.scale(mvMatrix, [1.0, 1.0, 1.0]);
+
 
     /* ------  Desenha o Circulo ------ */
     gl.bindBuffer(gl.ARRAY_BUFFER, circleVertexPositionBuffer);
@@ -250,23 +279,74 @@ function drawScene() {
     gl.drawArrays(gl.LINES, 0, markMVertexPositionBuffer.numItems);
 
     /* ------  Desenha o ponteiro das horas ------ */
+    mPushMatrix();
+    mat4.rotate(mvMatrix, degToRad(hAngle), [0, 0, 1]);
+
     gl.bindBuffer(gl.ARRAY_BUFFER, hourHandVertexPositionBuffer);
     gl.vertexAttribPointer(program.vertexPositionAttribute, hourHandVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
     setMatrixUniforms();
     gl.drawArrays(gl.LINES, 0, hourHandVertexPositionBuffer.numItems);
+    mPopMatrix();
 
     /* ------  Desenha o ponteiro dos minutos ------ */
+    mPushMatrix();
+    mat4.rotate(mvMatrix, degToRad(mAngle), [0, 0, 1]);
     gl.bindBuffer(gl.ARRAY_BUFFER, minHandVertexPositionBuffer);
     gl.vertexAttribPointer(program.vertexPositionAttribute, minHandVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
     setMatrixUniforms();
     gl.drawArrays(gl.LINES, 0, minHandVertexPositionBuffer.numItems);
+    mPopMatrix();
 
     /* ------  Desenha o ponteiro dos segundos ------ */
+    mPushMatrix();
+    mat4.rotate(mvMatrix, degToRad(sAngle), [0, 0, 1]);
+
     gl.bindBuffer(gl.ARRAY_BUFFER, secHandVertexPositionBuffer);
     gl.vertexAttribPointer(program.vertexPositionAttribute, secHandVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
     setMatrixUniforms();
     gl.drawArrays(gl.LINES, 0, secHandVertexPositionBuffer.numItems);
+    mPopMatrix();
 
+}
+
+
+
+var ultimo = 0;
+function animar()
+{
+  var sec = date.getSeconds();
+  var agora = new Date().getTime();
+  if(ultimo != 0)
+  {
+    var diferenca = agora - ultimo;
+    sAngle -= (6*diferenca/1000.0) % 360;
+    mAngle -= (6*diferenca/60000.0) % 360;
+    hAngle -= (6*diferenca/3600000.0) % 360;
+
+  }
+  ultimo = agora;
+}
+
+/*
+var prev = 0;
+function animar(){
+  var sec = date.getSeconds;
+  var min = date.getMinutes;
+  var hour = date.getHours;
+
+  var delta = sec - prev;
+  prev = sec;
+
+  sAngle  += ((60*delta)/1000.0) % 360.0;
+  sAngle = ((Math.PI * 2) * (sec / 60)) - ((Math.PI * 2) / 4);
+  //mAngle = ((Math.PI * 2) * (min / 60)) - ((Math.PI * 2) / 4);
+  //hAngle = ((Math.PI * 2) * ((hour * 5 + (min / 60) * 5) / 60)) - ((Math.PI * 2) / 4);
+}
+*/
+function tick(){
+  requestAnimFrame(tick);
+  drawScene();
+  animar();
 }
 
 function webGLStart() {
@@ -276,8 +356,8 @@ function webGLStart() {
 
   gl.clearColor(0.0, 0.0, 0.0, 1.0);
   gl.enable(gl.DEPTH_TEST);
-
-  drawScene();
+  //drawScene();
+  tick();
 }
 
 webGLStart();
